@@ -1,4 +1,4 @@
-package com.smartict.ActivityWatch.entity;
+package com.smartict.activitywatch.entity;
 
 public enum TypeEnum {
 

@@ -1,4 +1,4 @@
-package com.smartict.ActivityWatch.dto;
+package com.smartict.activitywatch.dto;
 
 
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -9,9 +9,9 @@ import java.time.LocalDateTime;
 @Data
 public class UsrActivityDTO {
 
-    private Integer fkuserId;
+    private Integer fkUserId;
 
-    private Integer fkactivityId;
+    private Integer fkActivityId;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime date;

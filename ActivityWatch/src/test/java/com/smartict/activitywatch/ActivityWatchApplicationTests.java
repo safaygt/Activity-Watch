@@ -1,4 +1,4 @@
-package com.smartict.ActivityWatch;
+package com.smartict.activitywatch;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

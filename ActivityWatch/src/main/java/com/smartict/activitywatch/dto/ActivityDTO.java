@@ -1,4 +1,4 @@
-package com.smartict.ActivityWatch.dto;
+package com.smartict.activitywatch.dto;
 
 
 import lombok.Data;

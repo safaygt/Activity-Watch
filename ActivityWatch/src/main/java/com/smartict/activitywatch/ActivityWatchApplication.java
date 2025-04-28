@@ -1,4 +1,4 @@
-package com.smartict.ActivityWatch;
+package com.smartict.activitywatch;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

@@ -1,21 +1,24 @@
-package com.smartict.ActivityWatch.entity;
+package com.smartict.activitywatch.entity;
 
 
 import jakarta.persistence.*;
 import lombok.Data;
 
 @Entity
-@Table(name = "usr")
 @Data
-public class Usr {
-
+@Table(name="activity")
+public class Activity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     @Column(unique = true)
-    private String username;
+    private String name;
+
+    @Enumerated(EnumType.STRING)
+    @Column
+    private TypeEnum type;
 
 
 
