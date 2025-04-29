@@ -1,6 +1,5 @@
 package com.smartict.activitywatch.controller;
 
-import com.smartict.activitywatch.dto.UsrActivityDTO;
 import com.smartict.activitywatch.dto.UsrActivityResponseDTO;
 import com.smartict.activitywatch.service.MainService;
 import lombok.RequiredArgsConstructor;

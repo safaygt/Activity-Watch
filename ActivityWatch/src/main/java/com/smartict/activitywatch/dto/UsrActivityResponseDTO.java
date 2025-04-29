@@ -9,7 +9,8 @@ import java.time.LocalDateTime;
 public class UsrActivityResponseDTO {
     private Integer id;
     private String username;
-    private String activityName;
+    private String windowTitle;
+    private String applicationName;
     private LocalDateTime date;
     private boolean isAfk;
 }

@@ -11,7 +11,9 @@ public class UsrActivityDTO {
 
     private Integer fkUserId;
 
-    private Integer fkActivityId;
+    private Integer fkWindowActivityId;
+
+    private Integer fkApplicationActivityId;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime date;

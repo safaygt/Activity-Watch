@@ -1,111 +1,106 @@
 package com.smartict.activitywatch.service;
 
-import com.smartict.activitywatch.entity.Activity;
-import com.smartict.activitywatch.entity.TypeEnum;
+import com.smartict.activitywatch.entity.ApplicationActivity;
 import com.smartict.activitywatch.entity.Usr;
 import com.smartict.activitywatch.entity.UsrActivity;
-import com.smartict.activitywatch.repository.ActivityRepository;
+import com.smartict.activitywatch.entity.WindowActivity;
+import com.smartict.activitywatch.repository.ApplicationActivityRepository;
 import com.smartict.activitywatch.repository.UsrActivityRepository;
 import com.smartict.activitywatch.repository.UsrRepository;
+import com.smartict.activitywatch.repository.WindowActivityRepository;
+import com.sun.jna.Native;
+import com.sun.jna.ptr.IntByReference;
+import com.sun.jna.platform.win32.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-
-import com.sun.jna.Native;
-import com.sun.jna.platform.win32.*;
-import com.sun.jna.ptr.IntByReference;
+import com.sun.jna.platform.win32.WinUser.LASTINPUTINFO;
 
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class SchedulerService {
 
-    private final ActivityRepository activityRepository;
     private final UsrRepository usrRepository;
+    private final WindowActivityRepository windowActivityRepository;
+    private final ApplicationActivityRepository applicationActivityRepository;
     private final UsrActivityRepository usrActivityRepository;
 
-    private LocalDate lastRecordedDate = LocalDate.now();
+    private LocalDateTime lastRecordedDate = LocalDateTime.now();
+
+    public LASTINPUTINFO getLastInputInfo() {
+        LASTINPUTINFO lastInputInfo = new LASTINPUTINFO();
+        lastInputInfo.cbSize = lastInputInfo.size();
+        User32.INSTANCE.GetLastInputInfo(lastInputInfo);
+        return lastInputInfo;
+    }
 
     @Scheduled(fixedRate = 60000)
     public void monitorActivities() {
         try {
-            checkDateAndResetIfNeeded();
-
-            String activeWindowTitle = getActiveWindowTitle();
-            String activeApplicationName = getActiveApplicationName();
+            String windowTitle = getActiveWindowTitle();
+            String applicationName = getActiveApplicationName();
             String currentUsername = System.getProperty("user.name");
 
-            if (activeWindowTitle == null || activeApplicationName == null) {
-                log.warn("Active window or application could not be determined.");
+            if (windowTitle == null || applicationName == null) {
+                log.warn("Window title or application name could not be found.");
                 return;
             }
 
-            Optional<Usr> userOpt = usrRepository.findByUsername(currentUsername);
+            Usr user = usrRepository.findByUsername(currentUsername)
+                    .orElseGet(() -> {
+                        Usr newUser = new Usr();
+                        newUser.setUsername(currentUsername);
+                        return usrRepository.save(newUser);
+                    });
 
-            Usr user;
-            if (userOpt.isEmpty()) {
-                user = new Usr();
-                user.setUsername(currentUsername);
-                user = usrRepository.save(user);
-                log.info("New user created with username: {}", currentUsername);
-            } else {
-                user = userOpt.get();
-            }
+            WindowActivity windowActivity = getOrCreateWindowActivity(windowTitle);
+            ApplicationActivity applicationActivity = getOrCreateApplicationActivity(applicationName);
 
-            Activity windowActivity = getOrCreateActivity(activeWindowTitle, TypeEnum.Window);
-            Activity applicationActivity = getOrCreateActivity(activeApplicationName, TypeEnum.Application);
+            WinUser.LASTINPUTINFO lastInputInfo = getLastInputInfo();
+            long lastInputTime = lastInputInfo.dwTime;
+            long systemUptime = (int) (System.currentTimeMillis() - Kernel32.INSTANCE.GetTickCount64());
 
-            saveUserActivity(user, windowActivity);
-            saveUserActivity(user, applicationActivity);
+            boolean isAfk = (systemUptime - lastInputTime) > 180000;  // 3 minutes
 
-            log.info("Activities logged successfully at {}", LocalDateTime.now());
+            saveUserActivity(user, windowActivity, applicationActivity, isAfk);
+
+            log.info("User activity logged at {}", LocalDateTime.now());
 
         } catch (Exception e) {
             log.error("Error while monitoring activities", e);
         }
     }
 
-    private void checkDateAndResetIfNeeded() {
-        LocalDate today = LocalDate.now();
-        if (!today.isEqual(lastRecordedDate)) {
-            // Gün değişmiş demektir!
-            log.info("New day detected. Resetting necessary fields at {}", LocalDateTime.now());
-
-            resetDailyActivityData();
-
-            lastRecordedDate = today;
-        }
+    private void saveUserActivity(Usr user, WindowActivity windowActivity, ApplicationActivity applicationActivity, boolean isAfk) {
+        UsrActivity activity = new UsrActivity();
+        activity.setUsr(user);
+        activity.setWindowActivity(windowActivity);
+        activity.setApplicationActivity(applicationActivity);
+        activity.setDate(LocalDateTime.now());
+        activity.setAfk(isAfk);
+        usrActivityRepository.save(activity);
     }
 
-    private void resetDailyActivityData() {
-
-        usrActivityRepository.deleteAllByDateBefore(LocalDate.now().atStartOfDay());
-
-        log.info("Daily activity data has been reset.");
-    }
-
-    private void saveUserActivity(Usr user, Activity activity) {
-        UsrActivity userActivity = new UsrActivity();
-        userActivity.setUsr(user);
-        userActivity.setActivity(activity);
-        userActivity.setDate(LocalDateTime.now());
-        userActivity.setAfk(false);
-        usrActivityRepository.save(userActivity);
-    }
-
-    private Activity getOrCreateActivity(String name, TypeEnum type) {
-        return activityRepository.findByName(name)
+    private WindowActivity getOrCreateWindowActivity(String title) {
+        return windowActivityRepository.findByWindowTitle(title)
                 .orElseGet(() -> {
-                    Activity newActivity = new Activity();
-                    newActivity.setName(name);
-                    newActivity.setType(type);
-                    return activityRepository.save(newActivity);
+                    WindowActivity wa = new WindowActivity();
+                    wa.setWindowTitle(title);
+                    return windowActivityRepository.save(wa);
+                });
+    }
+
+    private ApplicationActivity getOrCreateApplicationActivity(String name) {
+        return applicationActivityRepository.findByApplicationText(name)
+                .orElseGet(() -> {
+                    ApplicationActivity app = new ApplicationActivity();
+                    app.setApplicationText(name);
+                    return applicationActivityRepository.save(app);
                 });
     }
 
@@ -126,9 +121,7 @@ public class SchedulerService {
                 false,
                 pid.getValue()
         );
-        if (process == null) {
-            return null;
-        }
+        if (process == null) return null;
 
         byte[] exePath = new byte[1024];
         Psapi.INSTANCE.GetModuleBaseNameA(process, null, exePath, 1024);
@@ -139,23 +132,18 @@ public class SchedulerService {
 
     private String NativeToString(char[] buffer) {
         int len = 0;
-        while (len < buffer.length && buffer[len] != 0) {
-            len++;
-        }
+        while (len < buffer.length && buffer[len] != 0) len++;
         return new String(buffer, 0, len);
     }
 
     private String NativeToString(byte[] buffer) {
         int len = 0;
-        while (len < buffer.length && buffer[len] != 0) {
-            len++;
-        }
+        while (len < buffer.length && buffer[len] != 0) len++;
         return new String(buffer, 0, len, StandardCharsets.UTF_8);
     }
 
     public interface Psapi extends com.sun.jna.Library {
         Psapi INSTANCE = Native.load("Psapi", Psapi.class);
-
         int GetModuleBaseNameA(WinNT.HANDLE hProcess, WinDef.HMODULE hModule, byte[] lpBaseName, int nSize);
     }
 }
