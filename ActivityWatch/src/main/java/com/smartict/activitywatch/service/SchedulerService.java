@@ -18,7 +18,10 @@ import org.springframework.stereotype.Service;
 import com.sun.jna.platform.win32.WinUser.LASTINPUTINFO;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +41,10 @@ public class SchedulerService {
         User32.INSTANCE.GetLastInputInfo(lastInputInfo);
         return lastInputInfo;
     }
+
+
+
+    /* MİRAÇ İLE YAPTIĞIMIZ YER
 
     @Scheduled(fixedRate = 60000)
     public void monitorActivities() {
@@ -61,20 +68,84 @@ public class SchedulerService {
             WindowActivity windowActivity = getOrCreateWindowActivity(windowTitle);
             ApplicationActivity applicationActivity = getOrCreateApplicationActivity(applicationName);
 
-            WinUser.LASTINPUTINFO lastInputInfo = getLastInputInfo();
-            long lastInputTime = lastInputInfo.dwTime;
-            long systemUptime = (int) (System.currentTimeMillis() - Kernel32.INSTANCE.GetTickCount64());
 
-            boolean isAfk = (systemUptime - lastInputTime) > 180000;  // 3 minutes
+            LocalDate today = LocalDate.now();
 
-            saveUserActivity(user, windowActivity, applicationActivity, isAfk);
+            UsrActivity latestActivty = usrActivityRepository.findAll()
+                    .stream()
+                    .filter(activity -> activity.getDate().toLocalDate().isEqual(today)) // Sadece bugünün verilerini al
+                    .sorted((a, b) -> b.getDate().compareTo(a.getDate())) // Tarihe göre DESC sırala
+                    .findFirst().orElse(null);
 
-            log.info("User activity logged at {}", LocalDateTime.now());
+
+            LASTINPUTINFO info = getLastInputInfo();
+            long lastInputTimeMillis = Integer.toUnsignedLong(info.dwTime);
+
+            if(latestActivty == null) {
+                saveUserActivity(user, windowActivity, applicationActivity, false);
+            }else {
+                boolean isAfk;
+                if(  Math.abs(latestActivty.getDate().toInstant(ZoneOffset.UTC).toEpochMilli() - lastInputTimeMillis)  > 180000){
+                    isAfk = true;
+
+                } else {
+                    isAfk = false;
+                }
+
+                saveUserActivity(user, windowActivity, applicationActivity, isAfk);
+
+                log.info("User activity logged at {} | isAfk: {}", LocalDateTime.now(), isAfk);
+            }
+
+
 
         } catch (Exception e) {
             log.error("Error while monitoring activities", e);
         }
     }
+
+    */
+
+
+
+
+
+
+    @Scheduled(fixedRate = 60000)
+    public void monitorActivities() {
+        try {
+            String windowTitle = getActiveWindowTitle();
+            String applicationName = getActiveApplicationName();
+            String currentUsername = System.getProperty("user.name");
+
+            if (windowTitle == null || applicationName == null) {
+                log.warn("Window title or application name could not be found.");
+                return;
+            }
+
+            Usr user = usrRepository.findByUsername(currentUsername)
+                    .orElseGet(() -> {
+                        Usr newUser = new Usr();
+                        newUser.setUsername(currentUsername);
+                        return usrRepository.save(newUser);
+                    });
+
+            WindowActivity windowActivity = getOrCreateWindowActivity(windowTitle);
+            ApplicationActivity applicationActivity = getOrCreateApplicationActivity(applicationName);
+
+            LASTINPUTINFO info = getLastInputInfo();
+            long idleTimeMillis = Kernel32.INSTANCE.GetTickCount64() - Integer.toUnsignedLong(info.dwTime);
+            boolean isAfk = idleTimeMillis > 180000;
+
+            saveUserActivity(user, windowActivity, applicationActivity, isAfk);
+            log.info("User activity logged at {} | isAfk: {}", LocalDateTime.now(), isAfk);
+
+        } catch (Exception e) {
+            log.error("Error while monitoring activities", e);
+        }
+    }
+
+
 
     private void saveUserActivity(Usr user, WindowActivity windowActivity, ApplicationActivity applicationActivity, boolean isAfk) {
         UsrActivity activity = new UsrActivity();

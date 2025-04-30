@@ -9,4 +9,5 @@ public interface UsrActivityRepository  extends JpaRepository<UsrActivity, Integ
 
     void deleteAllByDateBefore(LocalDateTime date);
 
+    UsrActivity findTopByOrderByDateDesc();
 }
