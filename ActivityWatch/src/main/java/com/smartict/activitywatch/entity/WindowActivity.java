@@ -6,21 +6,14 @@ import lombok.Data;
 
 @Entity
 @Data
-@Table(name="activity")
-public class Activity {
+@Table(name="WindowActivity")
+public class WindowActivity {
+
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     @Column(unique = true)
-    private String name;
-
-    @Enumerated(EnumType.STRING)
-    @Column
-    private TypeEnum type;
-
-
-
-
+    private String windowTitle;
 }

@@ -1,10 +1,12 @@
 package com.smartict.activitywatch.controller;
 
-import com.smartict.activitywatch.dto.UsrActivityDTO;
+import com.smartict.activitywatch.dto.UsrActivityResponseDTO;
 import com.smartict.activitywatch.service.MainService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("v1/report")
@@ -13,13 +15,20 @@ public class MainController {
 
     private final MainService mainService;
 
-    @PostMapping("/log")
-    public ResponseEntity<String> logActivity(@RequestBody UsrActivityDTO dto) {
+
+
+    @GetMapping("/log")
+    public ResponseEntity<List<UsrActivityResponseDTO>> getLog() {
         try {
-            mainService.logActivity(dto);
-        } catch (Throwable e) {
-            throw new RuntimeException(e);
+            List<UsrActivityResponseDTO> activities = mainService.getAllActivities();
+            return ResponseEntity.ok(activities);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
-        return ResponseEntity.ok("Activity logged successfully.");
     }
+
+
+
+
+
 }
