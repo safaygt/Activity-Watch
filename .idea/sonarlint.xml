@@ -3,9 +3,13 @@
   <component name="SonarLintProjectSettings">
     <option name="moduleMapping">
       <map>
+<<<<<<< HEAD
         <entry key="com.smartict.activitywatch" value="com.smartict.ActivityWatch" />
         <entry key="com.smartict.activitywatch.main" value="com.smartict.ActivityWatch.main" />
         <entry key="com.smartict.activitywatch.test" value="com.smartict.ActivityWatch.test" />
+=======
+        <entry key="com.smartict.ActivityWatch" value="com.smartict.activitywatch" />
+>>>>>>> e1c13d1 (Saving changes before switching branches)
       </map>
     </option>
   </component>
