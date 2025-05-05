@@ -16,7 +16,6 @@ build/
 bin/
 !**/src/main/**/bin/
 !**/src/test/**/bin/
-.idea/
 
 ### IntelliJ IDEA ###
 .idea
@@ -37,6 +36,8 @@ out/
 ### VS Code ###
 .vscode/
 
+# Uygulama ayarlarındaki activeDirectory bilgilerini gizle
+application.properties
+src/main/resources/application.properties
 
 src/main/resources/*.properties
-
