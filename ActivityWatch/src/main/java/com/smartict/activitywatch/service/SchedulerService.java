@@ -11,6 +11,7 @@ import com.smartict.activitywatch.repository.WindowActivityRepository;
 import com.sun.jna.Native;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.platform.win32.*;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -30,14 +31,7 @@ public class SchedulerService {
     private final ApplicationActivityRepository applicationActivityRepository;
     private final UsrActivityRepository usrActivityRepository;
 
-    private LocalDateTime lastRecordedDate = LocalDateTime.now();
 
-    public LASTINPUTINFO getLastInputInfo() {
-        LASTINPUTINFO lastInputInfo = new LASTINPUTINFO();
-        lastInputInfo.cbSize = lastInputInfo.size();
-        User32.INSTANCE.GetLastInputInfo(lastInputInfo);
-        return lastInputInfo;
-    }
 
     @Scheduled(fixedRate = 60000)
     public void monitorActivities() {
@@ -61,19 +55,30 @@ public class SchedulerService {
             WindowActivity windowActivity = getOrCreateWindowActivity(windowTitle);
             ApplicationActivity applicationActivity = getOrCreateApplicationActivity(applicationName);
 
-            WinUser.LASTINPUTINFO lastInputInfo = getLastInputInfo();
-            long lastInputTime = lastInputInfo.dwTime;
-            long systemUptime = (int) (System.currentTimeMillis() - Kernel32.INSTANCE.GetTickCount64());
+            long idleTime = getIdleTimeMillis();
 
-            boolean isAfk = (systemUptime - lastInputTime) > 180000;  // 3 minutes
+            log.info("Idle time: {}",idleTime);
+
+            boolean isAfk = idleTime > 180000;
 
             saveUserActivity(user, windowActivity, applicationActivity, isAfk);
 
-            log.info("User activity logged at {}", LocalDateTime.now());
+
 
         } catch (Exception e) {
             log.error("Error while monitoring activities", e);
         }
+    }
+
+    private long getIdleTimeMillis() {
+        LASTINPUTINFO info = new LASTINPUTINFO();
+        info.cbSize = info.size();
+        User32.INSTANCE.GetLastInputInfo(info);
+
+        long lastInputTick = Integer.toUnsignedLong(info.dwTime);
+        long currentTick = Kernel32.INSTANCE.GetTickCount64();
+
+        return currentTick - lastInputTick;
     }
 
     private void saveUserActivity(Usr user, WindowActivity windowActivity, ApplicationActivity applicationActivity, boolean isAfk) {
@@ -85,6 +90,7 @@ public class SchedulerService {
         activity.setAfk(isAfk);
         usrActivityRepository.save(activity);
     }
+
 
     private WindowActivity getOrCreateWindowActivity(String title) {
         return windowActivityRepository.findByWindowTitle(title)
@@ -147,4 +153,5 @@ public class SchedulerService {
         int GetModuleBaseNameA(WinNT.HANDLE hProcess, WinDef.HMODULE hModule, byte[] lpBaseName, int nSize);
     }
 }
+
 
