@@ -7,9 +7,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @EnableScheduling
 public class ActivityWatchApplication {
-
-	public static void main(String[] args) {
-		SpringApplication.run(ActivityWatchApplication.class, args);
-	}
-
+    public static void main(String[] args) {
+        SpringApplication.run(ActivityWatchApplication.class, args);
+    }
 }
