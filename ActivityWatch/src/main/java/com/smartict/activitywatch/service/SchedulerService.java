@@ -12,6 +12,7 @@ import com.sun.jna.Native;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.platform.win32.*;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -30,6 +31,7 @@ public class SchedulerService {
     private final WindowActivityRepository windowActivityRepository;
     private final ApplicationActivityRepository applicationActivityRepository;
     private final UsrActivityRepository usrActivityRepository;
+    private final MainService mainService;
 
 
 
@@ -68,6 +70,12 @@ public class SchedulerService {
         } catch (Exception e) {
             log.error("Error while monitoring activities", e);
         }
+    }
+
+    @PreDestroy
+    public void resetOnShutdown() {
+        log.info("Application is shutting down. Resetting activity data...");
+        mainService.resetDailyData();
     }
 
     private long getIdleTimeMillis() {
