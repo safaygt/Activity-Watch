@@ -12,7 +12,6 @@ import com.sun.jna.Native;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.platform.win32.*;
 import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -33,10 +32,21 @@ public class SchedulerService {
     private final UsrActivityRepository usrActivityRepository;
     private final MainService mainService;
 
+    private long initialTimeMillis;
 
+    @PostConstruct
+    public void init() {
+        initialTimeMillis = System.currentTimeMillis();
+    }
 
     @Scheduled(fixedRate = 60000)
     public void monitorActivities() {
+        long currentTimeMillis = System.currentTimeMillis();
+
+        if (currentTimeMillis - initialTimeMillis < 60000) {
+            return;
+        }
+
         try {
             String windowTitle = getActiveWindowTitle();
             String applicationName = getActiveApplicationName();
@@ -59,23 +69,15 @@ public class SchedulerService {
 
             long idleTime = getIdleTimeMillis();
 
-            log.info("Idle time: {}",idleTime);
+            log.info("Idle time: {}", idleTime);
 
             boolean isAfk = idleTime > 180000;
 
             saveUserActivity(user, windowActivity, applicationActivity, isAfk);
 
-
-
         } catch (Exception e) {
             log.error("Error while monitoring activities", e);
         }
-    }
-
-    @PreDestroy
-    public void resetOnShutdown() {
-        log.info("Application is shutting down. Resetting activity data...");
-        mainService.resetDailyData();
     }
 
     private long getIdleTimeMillis() {
@@ -98,7 +100,6 @@ public class SchedulerService {
         activity.setAfk(isAfk);
         usrActivityRepository.save(activity);
     }
-
 
     private WindowActivity getOrCreateWindowActivity(String title) {
         return windowActivityRepository.findByWindowTitle(title)
@@ -161,5 +162,3 @@ public class SchedulerService {
         int GetModuleBaseNameA(WinNT.HANDLE hProcess, WinDef.HMODULE hModule, byte[] lpBaseName, int nSize);
     }
 }
-
-

@@ -27,15 +27,6 @@ public class MainController {
         }
     }
 
-    @PostMapping("/reset-day")
-    public ResponseEntity<Void> resetDay() {
-        try {
-            mainService.resetDailyData();
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
-    }
 
 
     @GetMapping("/log")
@@ -49,4 +40,30 @@ public class MainController {
         }
     }
 
+    @GetMapping("/log/monthly")
+    public ResponseEntity<List<UsrActivityResponseDTO>> getMonthlyLog(@RequestParam("year") int year, @RequestParam("month") int month) {
+        try {
+            List<UsrActivityResponseDTO> activities = mainService.getMonthlyActivities(year, month);
+            return ResponseEntity.ok(activities);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+
+    @GetMapping("/active-time/monthly")
+    public ResponseEntity<Long> getMonthlyActiveTime(
+            @RequestParam("year") int year,
+            @RequestParam("month") int month) {
+        try {
+            Long activeTime = mainService.getActiveTimeForMonth(year, month);
+            return ResponseEntity.ok(activeTime);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+
+
 }
+
