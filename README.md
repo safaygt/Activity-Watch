@@ -83,6 +83,18 @@ Aşağıdaki adımları izleyerek projeyi yerel ortamınızda çalıştırabilir
 
 ---
 
+🌐 Frontend Projesi
+
+Backend ile birlikte çalışması gereken React tabanlı frontend projesine aşağıdaki bağlantıdan ulaşabilirsiniz:
+
+📎 [ActivityWatchFrontend → GitHub](https://github.com/safaygt/ActivityWatchFrontend.git)
+
+☝️ Not: Frontend uygulaması çalışmadan önce backend sunucusunun ayağa kaldırılmış olması gereklidir. Aksi takdirde API bağlantıları başarısız olacaktır.
+
+
+
+---
+
 
 
 🤝 Katkıda Bulunma
